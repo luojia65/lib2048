@@ -1,4 +1,4 @@
-use Game;
+use draft1::game::Game;
 
 //generate random 2's or 4's into games
 pub trait Generate {

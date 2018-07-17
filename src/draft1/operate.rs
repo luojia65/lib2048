@@ -1,5 +1,5 @@
-use Direction;
-use Game;
+use draft1::direction::Direction;
+use draft1::game::Game;
 
 pub trait Operate {
     fn go(&mut self, dir: Direction);
@@ -59,9 +59,9 @@ fn combine_to_higher(g: &mut Game, dir: &Direction) {
 
 #[cfg(test)]
 mod tests {
-    use game::Game;
-    use direction::Direction;
-    use operate::{Operate, stack_to_one_side, combine_to_higher};
+    use draft1::game::Game;
+    use draft1::direction::Direction;
+    use draft1::operate::{Operate, stack_to_one_side, combine_to_higher};
 
     #[test]
     fn test_next_index() {
