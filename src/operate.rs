@@ -1,5 +1,5 @@
-use direction::Direction;
-use game::Game;
+use Direction;
+use Game;
 
 pub trait Operate {
     fn go(&mut self, dir: Direction);

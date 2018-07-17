@@ -1,5 +1,5 @@
 [package]
-name = "lj-2048"
+name = "lib2048"
 version = "0.0.1"
 authors = ["luojia65 <me@luojia.cc>"]
 description = "An abstract 2018 game backend in Rust"
