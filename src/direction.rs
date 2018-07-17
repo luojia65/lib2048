@@ -9,10 +9,10 @@ impl Direction {
     pub(crate) fn next_index(&self, ind: usize, rows: usize, columns: usize) -> Option<usize> {
         use self::Direction::{Up, Down, Left, Right};
         match self {
-            Up  => if ind >= columns * (rows - 1)  { None } else { Some(ind + columns) },
-            Down    => if ind < columns                { None } else { Some(ind - columns) },
+            Up   => if ind >= columns * (rows - 1)  { None } else { Some(ind + columns) },
+            Down => if ind < columns                { None } else { Some(ind - columns) },
             Left => if ind % columns == columns - 1 { None } else { Some(ind + 1) },
-            Right  => if ind % columns == 0           { None } else { Some(ind - 1) },
+            Right => if ind % columns == 0           { None } else { Some(ind - 1) },
         }
     }
 
