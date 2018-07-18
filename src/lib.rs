@@ -1,3 +1,7 @@
+extern crate rand;
+
+mod rand2048;
+
 use std::ops::Index;
 use std::ops::IndexMut;
 
@@ -41,26 +45,9 @@ impl TilePos {
     fn from_usize_index(index: usize, size: &TilePos) -> TilePos {
         TilePos::from((index / size.1, index % size.1))
     }
-}
 
-#[cfg(test)]
-#[test]
-fn test_usize_index() {
-    let cond = [
-        ((300, 500), (0, 0), 0),
-        ((300, 500), (0, 10), 10),
-        ((300, 500), (0, 499), 499),
-        ((300, 500), (1, 0), 500),
-        ((300, 500), (1, 499), 999),
-        ((300, 500), (299, 499), 300 * 500 - 1)
-    ];
-    for ((sx, sy), (x, y), i) in cond.iter() {
-        let size = TilePos::from((*sx, *sy));
-        let pos = TilePos::from((*x, *y));
-        let i1 = pos.to_usize_index(&size);
-        assert_eq!(*i, i1);
-        let i2 = TilePos::from_usize_index(i1, &size);
-        assert_eq!(pos, i2);
+    fn size_to_max_index(&self) -> usize {
+        self.0 * self.1 - 1
     }
 }
 
@@ -98,6 +85,8 @@ enum Display {
     GameOver
 }
 
+// For value n as u8, the shown number is 2^(n-1). Specially, if n==0, there isn't a tile.
+// That means, 0 => nothing, 1 => 2, 2 => 4, 3 => 8, ..., 11 => 2048.
 #[derive(Debug, Eq, PartialEq)]
 struct Board { content: Vec<u8>, size: TilePos }
 
@@ -202,10 +191,19 @@ fn display_move(v: &mut Vec<Display>, f: usize, t: usize, b: &Board) {
     v.push(r);
 }
 
+
 //fn generate_new(board: &mut Board) -> Vec<Display> {
-//    unimplemented!();
+//
 //}
 
+fn is_game_over(board: &Board) -> bool {
+    for i in 0..=board.size.size_to_max_index() {
+        if board[i] == 0 {
+            return false;
+        }
+    }
+    true
+}
 
 #[cfg(test)]
 mod tests {
@@ -213,16 +211,50 @@ mod tests {
     use control_move;
     use Control;
     use TilePos;
+    use is_game_over;
 
     #[test]
-    fn test_new() {
+    fn index_usize_convert() {
+        let cond = [
+            ((300, 500), (0, 0), 0),
+            ((300, 500), (0, 10), 10),
+            ((300, 500), (0, 499), 499),
+            ((300, 500), (1, 0), 500),
+            ((300, 500), (1, 499), 999),
+            ((300, 500), (299, 499), 300 * 500 - 1)
+        ];
+        for ((sx, sy), (x, y), i) in cond.iter() {
+            let size = TilePos::from((*sx, *sy));
+            let pos = TilePos::from((*x, *y));
+            let i1 = pos.to_usize_index(&size);
+            assert_eq!(*i, i1);
+            let i2 = TilePos::from_usize_index(i1, &size);
+            assert_eq!(pos, i2);
+        }
+    }
+
+    #[test]
+    fn index_new() {
+        let cond = [
+            ((10, 5), 10 * 5 - 1),
+            ((300, 500), 300 * 500 - 1),
+        ];
+        for ((sx, sy), s) in cond.iter() {
+            let size = TilePos::from((*sx, *sy));
+            let i = size.size_to_max_index();
+            assert_eq!(i, *s);
+        }
+    }
+
+    #[test]
+    fn board_new() {
         let g = Board::new((5, 10));
         assert_eq!(g.content.len(), 50);
         assert_eq!(g.size, TilePos::from((5, 10)));
     }
 
     #[test]
-    fn test_output_control() {
+    fn control_move_output() {
         let mut g = Board::from_raw_board((2, 4), vec![
             1, 1, 0, 2,
             0, 4, 4, 2,
@@ -237,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn test_control() {
+    fn control_move_path() {
         let cond = [
             (Control::Left, Board::from_raw_board((8, 7), vec![
                 2, 0, 0, 0, 0, 0, 0,
@@ -293,6 +325,32 @@ mod tests {
             ]);
             let _ = control_move(&mut g, dir);
             assert_eq!(g, *target);
+        }
+    }
+
+    #[test]
+    fn board_game_over() {
+        let cond = [
+            (false, Board::from_raw_board((2, 2), vec![0, 0, 0, 0])),
+            (false, Board::from_raw_board((2, 2), vec![1, 0, 0, 0])),
+            (false, Board::from_raw_board((2, 2), vec![0, 1, 0, 0])),
+            (false, Board::from_raw_board((2, 2), vec![0, 0, 1, 0])),
+            (false, Board::from_raw_board((2, 2), vec![0, 0, 0, 1])),
+            (true, Board::from_raw_board((2, 2), vec![1, 2, 3, 4])),
+            (false, Board::from_raw_board((8, 7), vec![
+                0, 0, 0, 0, 0, 2, 0,
+                0, 6, 6, 0, 2, 2, 0,
+                0, 2, 0, 0, 0, 2, 0,
+                0, 4, 3, 5, 2, 1, 0,
+                2, 2, 3, 3, 2, 2, 2,
+                0, 2, 2, 2, 2, 0, 2,
+                2, 4, 4, 2, 0, 0, 0,
+                2, 1, 2, 1, 2, 1, 2,
+            ]))
+        ];
+        for (res, b) in cond.iter() {
+            let i = is_game_over(b);
+            assert_eq!(*res, i);
         }
     }
 
