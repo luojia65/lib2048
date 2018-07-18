@@ -102,18 +102,21 @@ enum Display {
 struct Board { content: Vec<u8>, size: TilePos }
 
 impl Board {
-//    fn new Vec::with_capacity(size.0 * size.1)
-
-    fn from_raw_board(size: impl Into<TilePos>, content: Vec<u8>) -> Board {
+    fn new(size: impl Into<TilePos>) -> Board {
         let size = size.into();
+        Board::from_raw_board(size, Vec::new())
+    }
+
+    fn from_raw_board(size: impl Into<TilePos>, mut content: Vec<u8>) -> Board {
+        let size = size.into();
+        content.resize(size.0 * size.1, 0);
         Board {
             content,
             size
         }
     }
 
-//
-//    pub fn control(&mut self, ctrl: Control) -> Vec<Display> {
+//    pub fn control_and_generate(&mut self, ctrl: Control) -> Vec<Display> {
 //        Vec::new()
 //            .append(self.control_move(ctrl))
 //            .append(self.generate_new())
@@ -194,7 +197,7 @@ fn display_combine_into(v: &mut Vec<Display>, a: usize, b: usize, target: usize,
 fn display_move(v: &mut Vec<Display>, f: usize, t: usize, b: &Board) {
     let r = Display::Move {
         from: TilePos::from_usize_index(f, &b.size),
-        to: TilePos::from_usize_index(t, &b.size),
+        to: TilePos::from_usize_index( t, &b.size),
     };
     v.push(r);
 }
@@ -210,6 +213,13 @@ mod tests {
     use control_move;
     use Control;
     use TilePos;
+
+    #[test]
+    fn test_new() {
+        let g = Board::new((5, 10));
+        assert_eq!(g.content.len(), 50);
+        assert_eq!(g.size, TilePos::from((5, 10)));
+    }
 
     #[test]
     fn test_output_control() {
