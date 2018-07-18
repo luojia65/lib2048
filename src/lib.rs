@@ -1,8 +1,6 @@
 use std::ops::Index;
 use std::ops::IndexMut;
 
-pub mod draft1;
-
 /*
     Simulated frontend-backend communication
 
@@ -100,7 +98,7 @@ enum Display {
     GameOver
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 struct Board { content: Vec<u8>, size: TilePos }
 
 impl Board {
@@ -160,33 +158,25 @@ fn control_move(board: &mut Board, ctrl: &Control) -> Vec<Display> {
         ind.retain(|&e| board[e] != 0);
         // 找！
         let mut ptr = 0;
-
-        println!("2 {:?}", ind);
-
         for i in 0..ind.len() {
-            print!("i:{}, ind[i]:{} ", i, ind[i]);
             if board[ind[i]] == 0 {
                 continue;
             }
             if i != ind.len() - 1 && board[ind[i]] == board[ind[i + 1]] {
-                print!("combine ");
                 //合并i和i+1
                 let val = board[ind[i]]; // in case that i or i+1 equals target_ind[ptr]
                 board[ind[i]] = 0;
                 board[ind[i + 1]] = 0;
                 board[target_ind[ptr]] = val + 1;
                 display_combine_into(&mut ans, ind[i + 1], ind[i], target_ind[ptr],&board);
-                ptr += 1;
-            } else {
-                print!("move ");
+            } else if ind[i] != target_ind[ptr] { // filter unnecessary moves
                 //取出i
                 let val = board[ind[i]];
                 board[ind[i]] = 0;
                 board[target_ind[ptr]] = val;
                 display_move(&mut ans, ind[i], target_ind[ptr], &board);
-                ptr += 1;
             }
-            println!();
+            ptr += 1;
         }
     };
     ans
@@ -233,15 +223,18 @@ mod tests {
             2, 4, 4, 2, 0, 0, 0,
             2, 1, 2, 1, 2, 1, 2,
         ]);
+        let g1 = Board::from_raw_board((8, 7), vec![
+            2, 0, 0, 0, 0, 0, 0,
+            7, 3, 0, 0, 0, 0, 0,
+            3, 0, 0, 0, 0, 0, 0,
+            4, 3, 5, 2, 1, 0, 0,
+            3, 4, 3, 2, 0, 0, 0,
+            3, 3, 2, 0, 0, 0, 0,
+            2, 5, 2, 0, 0, 0, 0,
+            2, 1, 2, 1, 2, 1, 2,
+        ]);
         let a = control_move(&mut g, &Control::Left);
-        for i in 0..8 {
-            for j in 0..7 {
-                print!("{} ", g[TilePos::from((i, j))]);
-            }
-            println!();
-        }
-        println!("{:?}", g);
-        println!("{:?}", a);
+        assert_eq!(g, g1);
     }
 
 }
