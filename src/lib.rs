@@ -212,29 +212,78 @@ mod tests {
     use TilePos;
 
     #[test]
-    fn test_control() {
-        let mut g = Board::from_raw_board((8, 7), vec![
-            0, 0, 0, 0, 0, 2, 0,
-            0, 6, 6, 0, 2, 2, 0,
-            0, 2, 0, 0, 0, 2, 0,
-            0, 4, 3, 5, 2, 1, 0,
-            2, 2, 3, 3, 2, 2, 2,
-            0, 2, 2, 2, 2, 0, 2,
-            2, 4, 4, 2, 0, 0, 0,
-            2, 1, 2, 1, 2, 1, 2,
-        ]);
-        let g1 = Board::from_raw_board((8, 7), vec![
-            2, 0, 0, 0, 0, 0, 0,
-            7, 3, 0, 0, 0, 0, 0,
-            3, 0, 0, 0, 0, 0, 0,
-            4, 3, 5, 2, 1, 0, 0,
-            3, 4, 3, 2, 0, 0, 0,
-            3, 3, 2, 0, 0, 0, 0,
-            2, 5, 2, 0, 0, 0, 0,
-            2, 1, 2, 1, 2, 1, 2,
+    fn test_output_control() {
+        let mut g = Board::from_raw_board((2, 4), vec![
+            1, 1, 0, 2,
+            0, 4, 4, 2,
         ]);
         let a = control_move(&mut g, &Control::Left);
-        assert_eq!(g, g1);
+        let ans = String::from("[\
+        CombineInto { a: TilePos(0, 1), b: TilePos(0, 0), target: TilePos(0, 0) }, \
+        Move { from: TilePos(0, 3), to: TilePos(0, 1) }, \
+        CombineInto { a: TilePos(1, 2), b: TilePos(1, 1), target: TilePos(1, 0) }, \
+        Move { from: TilePos(1, 3), to: TilePos(1, 1) }]");
+        assert_eq!(ans, format!("{:?}", a));
+    }
+
+    #[test]
+    fn test_control() {
+        let cond = [
+            (Control::Left, Board::from_raw_board((8, 7), vec![
+                2, 0, 0, 0, 0, 0, 0,
+                7, 3, 0, 0, 0, 0, 0,
+                3, 0, 0, 0, 0, 0, 0,
+                4, 3, 5, 2, 1, 0, 0,
+                3, 4, 3, 2, 0, 0, 0,
+                3, 3, 2, 0, 0, 0, 0,
+                2, 5, 2, 0, 0, 0, 0,
+                2, 1, 2, 1, 2, 1, 2,
+            ])),
+            (Control::Right, Board::from_raw_board((8, 7), vec![
+                0, 0, 0, 0, 0, 0, 2,
+                0, 0, 0, 0, 0, 7, 3,
+                0, 0, 0, 0, 0, 0, 3,
+                0, 0, 4, 3, 5, 2, 1,
+                0, 0, 0, 3, 4, 2, 3,
+                0, 0, 0, 0, 2, 3, 3,
+                0, 0, 0, 0, 2, 5, 2,
+                2, 1, 2, 1, 2, 1, 2,
+            ])),
+            (Control::Up, Board::from_raw_board((8, 7), vec![
+                3, 6, 6, 5, 3, 3, 3,
+                2, 2, 4, 3, 3, 2, 2,
+                0, 4, 2, 3, 2, 1, 0,
+                0, 3, 4, 1, 0, 2, 0,
+                0, 4, 2, 0, 0, 1, 0,
+                0, 1, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0,
+            ])),
+            (Control::Down, Board::from_raw_board((8, 7), vec![
+                0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0,
+                0, 6, 0, 0, 0, 0, 0,
+                0, 2, 6, 0, 0, 2, 0,
+                0, 4, 4, 5, 0, 3, 0,
+                0, 3, 2, 3, 2, 1, 0,
+                2, 4, 4, 3, 3, 2, 2,
+                3, 1, 2, 1, 3, 1, 3
+            ]))
+        ];
+        for (dir, target) in cond.iter() {
+            let mut g = Board::from_raw_board((8, 7), vec![
+                0, 0, 0, 0, 0, 2, 0,
+                0, 6, 6, 0, 2, 2, 0,
+                0, 2, 0, 0, 0, 2, 0,
+                0, 4, 3, 5, 2, 1, 0,
+                2, 2, 3, 3, 2, 2, 2,
+                0, 2, 2, 2, 2, 0, 2,
+                2, 4, 4, 2, 0, 0, 0,
+                2, 1, 2, 1, 2, 1, 2,
+            ]);
+            let _ = control_move(&mut g, dir);
+            assert_eq!(g, *target);
+        }
     }
 
 }
