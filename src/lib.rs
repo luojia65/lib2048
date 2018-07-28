@@ -6,13 +6,12 @@ use std::ops::Index;
 use std::ops::IndexMut;
 
 /*
-    Simulated frontend-backend communication
+    Example frontend-backend communication
 
     > go right
-    < display move: tile (1, 1) -> (1,4), ...
-      display delete: tile (1, 1)
+    < display move: tile (1, 1) -> (1, 4), ...
       display combine: tile (1, 2) into tile (1, 1)
-      display create: tile (3, 3) -> 2
+      display create: tile (3, 3) -> 2, ...
     > go left
     < display ...
     > go up
@@ -79,7 +78,6 @@ enum Control { Up, Down, Left, Right }
 #[derive(Debug)]
 enum Display {
     Create { pos: TilePos, value: u8, },
-    Delete { pos: TilePos, },
     CombineInto { a: TilePos, b: TilePos, target: TilePos },
     Move { from: TilePos, to: TilePos },
     GameOver
@@ -112,7 +110,7 @@ impl Board {
 //    }
 }
 
-fn next_index(ct: &Control, ind: usize, rows: usize, columns: usize) -> Option<usize> {
+fn next_index(ct: &Control, ind: usize, &TilePos(rows, columns): &TilePos) -> Option<usize> {
     use Control::{Up, Down, Left, Right};
     match *ct {
         Up   => if ind >= columns * (rows - 1)  { None } else { Some(ind + columns) },
@@ -122,7 +120,7 @@ fn next_index(ct: &Control, ind: usize, rows: usize, columns: usize) -> Option<u
     }
 }
 
-fn each_start(ct: &Control, rows: usize, columns: usize) -> impl Iterator<Item = usize> {
+fn each_start(ct: &Control, &TilePos(rows, columns): &TilePos) -> impl Iterator<Item = usize> {
     use Control::{Up, Down, Left, Right};
     let (begin, end, multiplier, minus) = match *ct {
         Up    => (0, columns, 1, 0),
@@ -136,11 +134,11 @@ fn each_start(ct: &Control, rows: usize, columns: usize) -> impl Iterator<Item =
 #[must_use]
 fn control_move(board: &mut Board, ctrl: &Control) -> Vec<Display> {
     let mut ans = Vec::new();
-    for start_ind in each_start(ctrl, board.size.0, board.size.1) {
+    for start_ind in each_start(ctrl, &board.size) {
         let mut last_ind = start_ind;
         let mut ind = Vec::new();
         ind.push(last_ind);
-        while let Some(next_ind) = next_index(ctrl, last_ind, board.size.0, board.size.1) {
+        while let Some(next_ind) = next_index(ctrl, last_ind, &board.size) {
             ind.push(next_ind);
             last_ind = next_ind;
         }
@@ -200,6 +198,13 @@ fn is_game_over(board: &Board) -> bool {
     for i in 0..=board.size.size_to_max_index() {
         if board[i] == 0 {
             return false;
+        }
+        for ct in [Control::Right, Control::Down].iter() {
+            if let Some(next) = next_index(ct, i, &board.size) {
+                if board[i] == board[next] {
+                    return false;
+                }
+            }
         }
     }
     true
@@ -336,6 +341,22 @@ mod tests {
             (false, Board::from_raw_board((2, 2), vec![0, 1, 0, 0])),
             (false, Board::from_raw_board((2, 2), vec![0, 0, 1, 0])),
             (false, Board::from_raw_board((2, 2), vec![0, 0, 0, 1])),
+            (false, Board::from_raw_board((2, 2), vec![
+                0, 1,
+                0, 1]
+            )),
+            (false, Board::from_raw_board((2, 2), vec![
+                2, 2,
+                0, 0]
+            )),
+            (false, Board::from_raw_board((2, 2), vec![
+                1, 2,
+                1, 3]
+            )),
+            (false, Board::from_raw_board((2, 2), vec![
+                1, 2,
+                0, 0]
+            )),
             (true, Board::from_raw_board((2, 2), vec![1, 2, 3, 4])),
             (false, Board::from_raw_board((8, 7), vec![
                 0, 0, 0, 0, 0, 2, 0,
