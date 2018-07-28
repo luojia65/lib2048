@@ -5,4 +5,4 @@ authors = ["luojia65 <me@luojia.cc>"]
 description = "An abstract 2018 game backend in Rust"
 
 [dependencies]
-rand = "0.5"
+rand = "^0.5"

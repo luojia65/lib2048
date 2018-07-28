@@ -1,7 +1,5 @@
 extern crate rand;
 
-mod rand2048;
-
 use std::ops::Index;
 use std::ops::IndexMut;
 
@@ -19,7 +17,9 @@ use std::ops::IndexMut;
 
  */
 
-#[derive(Eq, PartialEq, Debug)]
+//////////////////////////////////// STRUCTURES ////////////////////////////////////
+
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub struct TilePos(usize, usize);
 
 impl From<(usize, usize)> for TilePos {
@@ -47,14 +47,6 @@ impl TilePos {
 
     fn size_to_max_index(&self) -> usize {
         self.0 * self.1 - 1
-    }
-}
-
-impl Index<TilePos> for Board {
-    type Output = u8;
-
-    fn index(&self, index: TilePos) -> &u8 {
-        &self.content[index.to_usize_index(&self.size)]
     }
 }
 
@@ -109,6 +101,8 @@ impl Board {
 //            .append(self.generate_new())
 //    }
 }
+
+//////////////////////////////////// CONTROLLING ////////////////////////////////////
 
 fn next_index(ct: &Control, ind: usize, &TilePos(rows, columns): &TilePos) -> Option<usize> {
     use Control::{Up, Down, Left, Right};
@@ -194,6 +188,43 @@ fn display_move(v: &mut Vec<Display>, f: usize, t: usize, b: &Board) {
 //
 //}
 
+//////////////////////////////////// GENERATE TILES ////////////////////////////////////
+
+use rand::Rng;
+
+fn gen_tile_value() -> u8 {
+    if rand::thread_rng().gen_bool(0.9) { 1 } else { 2 }
+}
+
+fn gen_pos(board: &Board) -> Option<TilePos> {
+    let mut available = Vec::new();
+    for i in 0..=board.size.size_to_max_index() {
+        if board[i] == 0 {
+            available.push(TilePos::from_usize_index(i, &board.size));
+        }
+    }
+    rand::thread_rng().choose(&available).map(|a| *a)
+}
+
+#[must_use]
+fn gen(board: &mut Board, count: usize) -> Vec<Display> {
+    let mut pos = Vec::new();
+    let size = board.size;
+    for _ in 0..count {
+        if let Some(p) = gen_pos(&board) {
+            pos.push((p, gen_tile_value()));
+        }
+    }
+    let mut ans = Vec::new();
+    for (pos, value) in pos {
+        board[pos.to_usize_index(&size)] = value;
+        ans.push(Display::Create { pos, value })
+    }
+    ans
+}
+
+//////////////////////////////////// GAME OVER LOGIC ////////////////////////////////////
+
 fn is_game_over(board: &Board) -> bool {
     for i in 0..=board.size.size_to_max_index() {
         if board[i] == 0 {
@@ -210,6 +241,8 @@ fn is_game_over(board: &Board) -> bool {
     true
 }
 
+//////////////////////////////////// UNIT TESTS ////////////////////////////////////
+
 #[cfg(test)]
 mod tests {
     use Board;
@@ -217,6 +250,10 @@ mod tests {
     use Control;
     use TilePos;
     use is_game_over;
+    use gen_tile_value;
+    use gen_pos;
+    use gen;
+    use Display;
 
     #[test]
     fn index_usize_convert() {
@@ -375,5 +412,62 @@ mod tests {
         }
     }
 
+    #[test]
+    fn generate_tile_value() {
+        for _ in 0..1000 {
+            let a = gen_tile_value();
+            assert!(a == 1 || a == 2);
+        }
+    }
+
+    #[test]
+    fn generate_pos() {
+        let cond = [
+            (Board::from_raw_board((2, 2), vec![
+                0, 0,
+                1, 0
+            ]), Some(vec![(0, 0), (0, 1), (1, 1)])),
+            (Board::from_raw_board((2, 3), vec![
+                0, 3, 0,
+                1, 2, 1
+            ]), Some(vec![(0, 0), (0, 2)])),
+            (Board::from_raw_board((2, 2), vec![
+                2, 3,
+                1, 4
+            ]), None),
+        ];
+        fn check_contains(range: &Vec<(usize, usize)>, pos: TilePos) -> bool {
+            let a = &(pos.0, pos.1);
+            range.contains(a)
+        }
+        for (board, within) in cond.iter() {
+            for _ in 0..1000 {
+                let pos = gen_pos(board);
+                match (within, pos) {
+                    (None, Some(_)) => panic!("pos generated with no space left in board"),
+                    (None, None) => continue,
+                    (Some(_), None) => panic!("space in board not detected"),
+                    (Some(range), Some(pos)) if !check_contains(range, pos) =>
+                        panic!("pos generated outside bound"),
+                    (Some(_), Some(_)) => continue,
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn generate() {
+        let mut board = Board::from_raw_board((2, 2), vec![
+            0, 8,
+            9, 0
+        ]);
+        let display = gen(&mut board, 2);
+        for d in &display {
+            if let Display::Create { pos, value } = d {
+                assert!(vec![(0, 0), (1, 1)].contains(&(pos.0, pos.1)));
+                assert!(vec![1, 2].contains(value));
+            }
+        }
+    }
 }
 
