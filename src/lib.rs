@@ -37,16 +37,20 @@ impl TilePos {
        (1, 499) => 1000,
        (299, 499) => 300 * 500 - 1
     */
-    fn to_usize_index(&self, size: &TilePos) -> usize {
+    pub fn to_usize_index(&self, size: TilePos) -> usize {
         self.0 * size.1 + self.1
     }
 
-    fn from_usize_index(index: usize, size: &TilePos) -> TilePos {
+    fn from_usize_index(index: usize, size: TilePos) -> TilePos {
         TilePos::from((index / size.1, index % size.1))
     }
 
     fn size_to_max_index(&self) -> usize {
         self.0 * self.1 - 1
+    }
+
+    pub fn size_as_usize(&self) -> usize {
+        self.0 * self.1
     }
 }
 
@@ -65,11 +69,12 @@ impl IndexMut<usize> for Board {
     }
 }
 
-enum Control { Up, Down, Left, Right }
+#[derive(Copy, Clone, Debug)]
+pub enum Control { Up, Down, Left, Right }
 
-#[derive(Debug)]
-enum Display {
-    Create { pos: TilePos, value: u8, },
+#[derive(Copy, Clone, Debug)]
+pub enum Display {
+    Create { pos: TilePos, value: u8 },
     CombineInto { a: TilePos, b: TilePos, target: TilePos },
     Move { from: TilePos, to: TilePos },
     GameOver
@@ -78,28 +83,38 @@ enum Display {
 // For value n as u8, the shown number is 2^(n-1). Specially, if n==0, there isn't a tile.
 // That means, 0 => nothing, 1 => 2, 2 => 4, 3 => 8, ..., 11 => 2048.
 #[derive(Debug, Eq, PartialEq)]
-struct Board { content: Vec<u8>, size: TilePos }
+pub struct Board { content: Vec<u8>, size: TilePos }
 
 impl Board {
-    fn new(size: impl Into<TilePos>) -> Board {
+    pub fn new(size: impl Into<TilePos>) -> Board {
         let size = size.into();
         Board::from_raw_board(size, Vec::new())
     }
 
     fn from_raw_board(size: impl Into<TilePos>, mut content: Vec<u8>) -> Board {
         let size = size.into();
-        content.resize(size.0 * size.1, 0);
+        content.resize(size.size_as_usize(), 0);
         Board {
             content,
             size
         }
     }
 
-//    pub fn control_and_generate(&mut self, ctrl: Control) -> Vec<Display> {
-//        Vec::new()
-//            .append(self.control_move(ctrl))
-//            .append(self.generate_new())
-//    }
+    #[must_use]
+    pub fn start_game(&mut self) -> Vec<Display> {
+        gen(self, 2)
+    }
+
+    #[must_use]
+    pub fn control_and_generate(&mut self, ctrl: Control) -> Vec<Display> {
+        let mut vec = Vec::new();
+        vec.append(&mut control_move(self, &ctrl).clone());
+        vec.append(&mut gen(self, 2).clone());
+        if is_game_over(self) {
+            vec.push(Display::GameOver);
+        };
+        vec
+    }
 }
 
 //////////////////////////////////// CONTROLLING ////////////////////////////////////
@@ -168,25 +183,20 @@ fn control_move(board: &mut Board, ctrl: &Control) -> Vec<Display> {
 
 fn display_combine_into(v: &mut Vec<Display>, a: usize, b: usize, target: usize, bo: &Board) {
     let r = Display::CombineInto {
-        a: TilePos::from_usize_index(a, &bo.size),
-        b: TilePos::from_usize_index(b, &bo.size),
-        target: TilePos::from_usize_index(target, &bo.size)
+        a: TilePos::from_usize_index(a, bo.size),
+        b: TilePos::from_usize_index(b, bo.size),
+        target: TilePos::from_usize_index(target, bo.size)
     };
     v.push(r);
 }
 
 fn display_move(v: &mut Vec<Display>, f: usize, t: usize, b: &Board) {
     let r = Display::Move {
-        from: TilePos::from_usize_index(f, &b.size),
-        to: TilePos::from_usize_index( t, &b.size),
+        from: TilePos::from_usize_index(f, b.size),
+        to: TilePos::from_usize_index( t, b.size),
     };
     v.push(r);
 }
-
-
-//fn generate_new(board: &mut Board) -> Vec<Display> {
-//
-//}
 
 //////////////////////////////////// GENERATE TILES ////////////////////////////////////
 
@@ -200,7 +210,7 @@ fn gen_pos(board: &Board) -> Option<TilePos> {
     let mut available = Vec::new();
     for i in 0..=board.size.size_to_max_index() {
         if board[i] == 0 {
-            available.push(TilePos::from_usize_index(i, &board.size));
+            available.push(TilePos::from_usize_index(i, board.size));
         }
     }
     rand::thread_rng().choose(&available).map(|a| *a)
@@ -208,17 +218,14 @@ fn gen_pos(board: &Board) -> Option<TilePos> {
 
 #[must_use]
 fn gen(board: &mut Board, count: usize) -> Vec<Display> {
-    let mut pos = Vec::new();
     let size = board.size;
-    for _ in 0..count {
-        if let Some(p) = gen_pos(&board) {
-            pos.push((p, gen_tile_value()));
-        }
-    }
     let mut ans = Vec::new();
-    for (pos, value) in pos {
-        board[pos.to_usize_index(&size)] = value;
-        ans.push(Display::Create { pos, value })
+    for _ in 0..count {
+        if let Some(pos) = gen_pos(&board) {
+            let value = gen_tile_value();
+            board[pos.to_usize_index(size)] = value;
+            ans.push(Display::Create { pos, value })
+        }
     }
     ans
 }
@@ -268,9 +275,9 @@ mod tests {
         for ((sx, sy), (x, y), i) in cond.iter() {
             let size = TilePos::from((*sx, *sy));
             let pos = TilePos::from((*x, *y));
-            let i1 = pos.to_usize_index(&size);
+            let i1 = pos.to_usize_index(size);
             assert_eq!(*i, i1);
-            let i2 = TilePos::from_usize_index(i1, &size);
+            let i2 = TilePos::from_usize_index(i1, size);
             assert_eq!(pos, i2);
         }
     }
