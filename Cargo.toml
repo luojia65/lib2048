@@ -8,6 +8,11 @@ readme = "README.md"
 repository = "https://github.com/luojia65/lib2048"
 documentation = "https://docs.rs/lib2048"
 
+[workspace]
+members = [
+    "examples/console_2048"
+]
+
 [dependencies]
 rand = "^0.5"
-console = "^0.6"
+

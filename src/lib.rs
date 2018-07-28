@@ -77,13 +77,18 @@ pub enum Display {
     Create { pos: TilePos, value: u8 },
     CombineInto { a: TilePos, b: TilePos, target: TilePos },
     Move { from: TilePos, to: TilePos },
-    GameOver
+    ScoreAdd { add: usize },
+    GameOver { score: usize }
 }
 
 // For value n as u8, the shown number is 2^(n-1). Specially, if n==0, there isn't a tile.
 // That means, 0 => nothing, 1 => 2, 2 => 4, 3 => 8, ..., 11 => 2048.
 #[derive(Debug, Eq, PartialEq)]
-pub struct Board { content: Vec<u8>, size: TilePos }
+pub struct Board {
+    content: Vec<u8>,
+    size: TilePos,
+    score: usize,
+}
 
 impl Board {
     pub fn new(size: impl Into<TilePos>) -> Board {
@@ -96,13 +101,14 @@ impl Board {
         content.resize(size.size_as_usize(), 0);
         Board {
             content,
-            size
+            size,
+            score: 0
         }
     }
 
     #[must_use]
     pub fn start_game(&mut self) -> Vec<Display> {
-        gen(self, 2)
+        gen(self, 4)
     }
 
     #[must_use]
@@ -111,7 +117,7 @@ impl Board {
         vec.append(&mut control_move(self, &ctrl).clone());
         vec.append(&mut gen(self, 2).clone());
         if is_game_over(self) {
-            vec.push(Display::GameOver);
+            vec.push(Display::GameOver { score: self.score });
         };
         vec
     }
@@ -168,6 +174,9 @@ fn control_move(board: &mut Board, ctrl: &Control) -> Vec<Display> {
                 board[ind[i + 1]] = 0;
                 board[target_ind[ptr]] = val + 1;
                 display_combine_into(&mut ans, ind[i + 1], ind[i], target_ind[ptr],&board);
+                let add = 2usize << val as usize;
+                ans.push(Display::ScoreAdd { add });
+                board.score += add;
             } else if ind[i] != target_ind[ptr] { // filter unnecessary moves
                 //取出i
                 let val = board[ind[i]];
