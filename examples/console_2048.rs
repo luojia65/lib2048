@@ -1,8 +1,10 @@
 extern crate lib2048;
+extern crate console;
 
 use lib2048::*;
 use std::ops::Index;
 use std::ops::IndexMut;
+use std::io::Write;
 
 static SIZE: (usize, usize) = (4, 4);
 
@@ -35,6 +37,7 @@ fn main() {
     let mut board = Board::new(SIZE);
     let mut frontend_board = FrontendBoard::new(SIZE);
     let mut ds = board.start_game();
+    let mut term = console::Term::stdout();
     'main: loop {
         //process last operation
         for d in ds {
@@ -43,7 +46,6 @@ fn main() {
                     frontend_board[pos] = value;
                 },
                 Display::CombineInto { a, b, target } => {
-                    println!("a{}, b{}, t{}", frontend_board[a], frontend_board[b], frontend_board[target]);
                     let value = frontend_board[a];
                     frontend_board[a] = 0;
                     frontend_board[b] = 0;
@@ -54,7 +56,7 @@ fn main() {
                     frontend_board[from] = 0;
                 },
                 Display::GameOver => {
-                    println!("Game over!");
+                    writeln!(term, "Game over!");
                     break 'main;
                 }
             }
@@ -62,9 +64,9 @@ fn main() {
         //print the board
         for i in 0..4 {
             for j in 0..4 {
-                print!("{} ", frontend_board[TilePos::from((i, j))]);
+                write!(term, "{} ", frontend_board[TilePos::from((i, j))]);
             }
-            println!();
+            writeln!(term);
         }
         //wait for an operation
         let mut input;
@@ -79,7 +81,7 @@ fn main() {
                 ref s if s == "s\n" => Control::Down,
                 ref s if s == "w\n" => Control::Up,
                 _ => {
-                    println!("invalid input: {}", input);
+                    writeln!(term, "invalid input: {}", input);
                     continue 'input
                 }
             };

@@ -6,3 +6,4 @@ description = "An abstract 2018 game backend in Rust"
 
 [dependencies]
 rand = "^0.5"
+console = "^0.6"
