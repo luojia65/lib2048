@@ -3,6 +3,10 @@ name = "lib2048"
 version = "0.0.1"
 authors = ["luojia65 <me@luojia.cc>"]
 description = "An abstract 2018 game backend in Rust"
+license = "WTFPL"
+readme = "README.md"
+repository = "https://github.com/luojia65/lib2048"
+documentation = "https://docs.rs/lib2048"
 
 [dependencies]
 rand = "^0.5"
