@@ -1,0 +1,10 @@
+[package]
+name = "console_2048"
+version = "0.0.0"
+workspace = "../../"
+publish = false
+
+[dependencies]
+lib2048 = { path = "../../" }
+term = "^0.5"
+getch = "*"
